@@ -21,31 +21,31 @@ class TestCredentialsFormat(unittest.TestCase):
 
     def test_000_something(self):
 
-        if os.path.isfile("data/test_database.db"):
-            os.remove("data/test_database.db")
+        if os.path.isfile("tests/data/temporary_test_database.db"):
+            os.remove("tests/data/temporary_test_database.db")
 
-        with open("data/test_credentials1", "w") as f:
-            f.write("max.leiwig@gmail.com:passwort123\n")
-            f.write("max.leiwig@gmx.de:dieisteinpassswort\n")
-            f.write("s6maleiw@uni-bonn.de:sehrsicherespasswort\n")
+        # with open("tests/data/test_credentials1", "w") as f:
+        #     f.write("max.leiwig@gmail.com:passwort123\n")
+        #     f.write("max.leiwig@gmx.de:dieisteinpassswort\n")
+        #     f.write("s6maleiw@uni-bonn.de:sehrsicherespasswort\n")
 
-        with open("data/test_credentials2", "w") as f:
-            f.write("password:max2.leiwig@gmail.com\n")
-            f.write("diesisteinpassword:max2.leiwig@gmx.de\n")
-            f.write("sehrsicherespasswort:s7maleiw@uni-bonn.de\n")
+        # with open("tests/data/test_credentials2", "w") as f:
+        #     f.write("password:max2.leiwig@gmail.com\n")
+        #     f.write("diesisteinpassword:max2.leiwig@gmx.de\n")
+        #     f.write("sehrsicherespasswort:s7maleiw@uni-bonn.de\n")
 
-        with open("data/test_match", "w") as f:
-            f.write("max.leiwig@gmail.com:passwort123\n")
-            f.write("max2.leiwig@gmail.com:password\n")
-            f.write("s6maleiw@uni-bonn.de:adsfasfsda\n")
+        # with open("tests/data/test_match", "w") as f:
+        #     f.write("max.leiwig@gmail.com:passwort123\n")
+        #     f.write("max2.leiwig@gmail.com:password\n")
+        #     f.write("s6maleiw@uni-bonn.de:adsfasfsda\n")
 
-        test_db = SqliteDatabase("data/test_database.db")
+        test_db = SqliteDatabase("tests/data/temporary_test_database.db")
 
         test_format = CredentialFormat()
 
         test_format.add_table_to_database(test_db)
 
-        credentials1 = test_format.read_data_from_file("data/test_credentials1")
+        credentials1 = test_format.read_data_from_file("tests/data/test_credentials1")
 
         assert(credentials1 == [
             CredentialHolder(email='max.leiwig@gmail.com', password='passwort123'),
@@ -55,7 +55,7 @@ class TestCredentialsFormat(unittest.TestCase):
 
         test_format.add_data_to_database(test_db, credentials1)
 
-        credentials2 = test_format.read_data_from_file("data/test_credentials2")
+        credentials2 = test_format.read_data_from_file("tests/data/test_credentials2")
 
         assert(credentials2 == [
             CredentialHolder(email='max2.leiwig@gmail.com', password='password'),
@@ -69,10 +69,12 @@ class TestCredentialsFormat(unittest.TestCase):
 
         assert(matches == [CredentialHolder(email='s6maleiw@uni-bonn.de', password='')])
 
-        credentials_match = test_format.read_data_from_file("data/test_match")
+        credentials_match = test_format.read_data_from_file("tests/data/test_match")
         matches = test_format.match_data_with_database(test_db, credentials_match)
 
         assert(matches == [
             CredentialHolder(email='max.leiwig@gmail.com', password='passwort123'),
             CredentialHolder(email='max2.leiwig@gmail.com', password='password')
             ])
+
+        test_db.close()

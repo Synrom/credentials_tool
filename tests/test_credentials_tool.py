@@ -5,8 +5,6 @@
 
 import unittest
 
-import credentials_tool.tool
-
 
 class TestCredentials_tool(unittest.TestCase):
     """Tests for `credentials_tool` package."""
@@ -18,4 +16,4 @@ class TestCredentials_tool(unittest.TestCase):
         """Tear down test fixtures, if any."""
 
     def test_000_something(self):
-        credentials_tool.tool.do_something()
+        pass

@@ -10,7 +10,7 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
-requirements = ["dataclasses"]
+requirements = []
 
 test_requirements = requirements
 
@@ -39,7 +39,11 @@ setup(
     keywords='credentials_tool',
     name='credentials_tool',
     packages=find_packages(include=['credentials_tool', 'credentials_tool.*']),
-    data_files=[('data', ['data/database.db'])],
+    data_files=[('test_data', [
+        'tests/data/test_credentials1',
+        'tests/data/test_credentials2',
+        'tests/data/test_match'
+        ])],
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/Synrom/credentials_tool',
