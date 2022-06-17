@@ -1,7 +1,5 @@
-CredentialFormat Tests
-CredentialTool
-CLI
-Tests
+CLI 
+	-> --match-field <field>=<value>
 Kommentare
 Readme
 (Dokumentation)

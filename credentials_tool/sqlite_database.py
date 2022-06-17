@@ -1,11 +1,19 @@
 import sqlite3
 from credentials_tool.abstract_classes import AbstractDatabase
+from credentials_tool.errors import DatabaseInsertionError, DatabaseMatchingError, DatabaseOpeningError
 
 
 class SqliteDatabase(AbstractDatabase):
 
     def __init__(self, filename: str):
-        self.connection = sqlite3.connect(filename)
+
+        try:
+
+            self.connection = sqlite3.connect(filename)
+
+        except sqlite3.OperationalError:
+            raise DatabaseOpeningError("Cant open "+filename)
+
         self.cursor = self.connection.cursor()
 
     def insert(self, tablename: str, values: tuple) -> None:
@@ -14,18 +22,34 @@ class SqliteDatabase(AbstractDatabase):
         sql_cmd += ", ".join(["?"] * len(values))
         sql_cmd += ")"
 
-        self.cursor.execute(sql_cmd, values)
+        try:
 
-    def match(self, tablename: str, search_columns: tuple, values: tuple, return_columns: tuple = ("*",)) -> list:
+            self.cursor.execute(sql_cmd, values)
+
+        except sqlite3.OperationalError:
+            raise DatabaseInsertionError("Insertion Error while trying to execute: "+sql_cmd)
+
+    def match(self, tablename: str, search: dict, return_columns: tuple = ("*",)) -> list:
 
         self.cursor.fetchall()
 
         sql_cmd = "SELECT "
         sql_cmd += ", ".join(return_columns)
         sql_cmd += " FROM "+tablename+" WHERE "
+
+        search_values = ()
+        search_columns = ()
+        for column, value in search.items():
+            search_columns += (column,)
+            search_values += (value,)
+
         sql_cmd += " AND ".join(column+"=?" for column in search_columns)
 
-        self.cursor.execute(sql_cmd, values)
+        try:
+            self.cursor.execute(sql_cmd, search_values)
+
+        except sqlite3.OperationalError:
+            raise DatabaseMatchingError("Matching Error while trying to execute: "+sql_cmd)
 
         return self.cursor.fetchall()
 
@@ -39,18 +63,23 @@ class SqliteDatabase(AbstractDatabase):
             return True
         return False
 
-    def create_table(self, tablename: str, columns: tuple, types: tuple) -> None:
+    def create_table(self, tablename: str, tablestructure: dict) -> None:
 
         sql_cmd = "CREATE TABLE "+tablename+" ("
-        sql_cmd += ",".join(column+" "+typename for column, typename in zip(columns, types))
+        sql_cmd += ",".join(str(column)+" "+str(typename) for column, typename in tablestructure.items())
         sql_cmd += ")"
 
-        self.cursor.execute(sql_cmd)
+        try:
 
-    def create_table_if_non_existent(self, tablename: str, columns: tuple, types: tuple) -> None:
+            self.cursor.execute(sql_cmd)
+
+        except sqlite3.OperationalError:
+            raise DatabaseInsertionError("Insertion Error while trying to execute: "+sql_cmd)
+
+    def create_table_if_non_existent(self, tablename: str, tablestructure: dict) -> None:
 
         if not self.exist_table(tablename):
-            self.create_table(tablename, columns, types)
+            self.create_table(tablename, tablestructure)
 
     def commit(self):
         self.connection.commit()

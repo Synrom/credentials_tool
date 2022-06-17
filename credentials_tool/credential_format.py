@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from abc import ABC, abstractmethod
 import hashlib
 import base64
@@ -6,18 +6,13 @@ import re
 import os
 
 from credentials_tool.abstract_classes import AbstractFormat, AbstractDatabase
+from credentials_tool.errors import InterpreterNotFoundError
 
 
 @dataclass
 class CredentialHolder():
     email: str
     password: str = ""
-
-    def as_tuple(self):
-        return (self.email, self.password)
-
-    def as_seacharble_tuple(self):
-        return (self.email, )
 
     def generate_salt(self):
         return os.urandom(32)
@@ -33,10 +28,6 @@ class CredentialHolder():
         salt = base64.b64encode(raw_salt).decode("utf-8")
 
         return (self.email, hashed_pwd, salt)
-
-
-class InterpreterNotFoundError(Exception):
-    pass
 
 
 class AbstractLineInterpreterCredential(ABC):
@@ -108,31 +99,27 @@ class LineInterpreterMailPassword(AbstractLineInterpreterCredential):
 
 class CredentialFormat(AbstractFormat):
 
-    def __init__(self, tablename: str = "credentials", email_regex: str = r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)"):
+    def table_name(self):
+        return "credentials_email_and_password"
+
+    def table_columns(self):
+        return ("email", "password", "salt")
+
+    def table_types(self):
+        return ("varchar(320)", "varchar(172)", "varchar(44)")
+
+    def __init__(self, email_regex: str = r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)"):
 
         self.line_interpreters = [LineInterpreterMailPassword(email_regex), LineInterpreterPasswordMail(email_regex)]
-
-        self.tablename = tablename
-        self.tablecolumns = ("email", "password", "salt")
-        self.tablecolumns_for_search = ("email",)
-        self.tabletypes = ("varchar(320)", "varchar(172)", "varchar(44)")
+        self.table_columns_for_search = ("email",)
+        self.table_salt_position = 2
+        self.table_password_position = 1
 
     def read_data_from_file(self, filename: str) -> list[CredentialHolder]:
 
-        try:
-            f = open(filename, "r")
-        except FileNotFoundError:
-            print(filename+" doesnt exist")
-            return []
+        f = open(filename, "r")
 
-        try:
-
-            file_interpreter = self.establich_interpreter_for_file(f)
-
-        except InterpreterNotFoundError:
-            print("Error: couldnt find any valid interpreter for "+filename)
-            f.close()
-            return []
+        file_interpreter = self.establich_interpreter_for_file(f)
 
         credentials = []
 
@@ -148,7 +135,7 @@ class CredentialFormat(AbstractFormat):
 
         for credential in credentials:
 
-            database.insert(self.tablename, credential.as_tuple_with_hashed_password())
+            database.insert(self.table_name(), credential.as_tuple_with_hashed_password())
 
     def match_data_with_database(self, database: AbstractDatabase, credentials: list[CredentialHolder]) -> list:
 
@@ -156,30 +143,35 @@ class CredentialFormat(AbstractFormat):
 
         for credential in credentials:
 
-            search_credential = credential.as_seacharble_tuple()
-            matches_of_credential = database.match(self.tablename, self.tablecolumns_for_search, search_credential)
+            search = {}
+            credential_dict = asdict(credential)
+
+            for column in self.table_columns_for_search:
+                search.update({column: credential_dict[column]})
+
+            matches_of_credential = database.match(self.table_name(), search, return_columns=self.table_columns())
 
             for match_of_credential in matches_of_credential:
 
-                raw_salt = base64.b64decode(match_of_credential[2])
+                raw_salt = base64.b64decode(match_of_credential[self.table_salt_position])
 
-                if credential.get_hashed_password(raw_salt) == match_of_credential[1]:
+                if credential.get_hashed_password(raw_salt) == match_of_credential[self.table_password_position]:
                     matches.append(credential)
 
         return matches
 
-    def match_fields_with_database(self, database: AbstractDatabase, fields: tuple, values: tuple) -> list:
+    def match_fields_with_database(self, database: AbstractDatabase, search: dict) -> list:
 
-        if len(fields) != len(values) or "password" in fields:
+        if "password" in search or "salt" in search:
             return []
 
-        matches_as_tuples = database.match(self.tablename, fields, values, return_columns=self.tablecolumns_for_search)
-        matches_as_credentials = [CredentialHolder(email=match[0]) for match in matches_as_tuples]
+        matches_as_tuples = database.match(self.table_name(), search, return_columns=self.table_columns_for_search)
+        matches_as_credentials = [CredentialHolder(*match) for match in matches_as_tuples]
 
         return matches_as_credentials
 
     def add_table_to_database(self, database: AbstractDatabase) -> None:
-        database.create_table_if_non_existent(self.tablename, self.tablecolumns, self.tabletypes)
+        database.create_table_if_non_existent(self.table_name(), dict(zip(self.table_columns(), self.table_types())))
 
     def establich_interpreter_for_file(self, file) -> AbstractLineInterpreterCredential:
 

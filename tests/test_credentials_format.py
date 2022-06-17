@@ -65,7 +65,7 @@ class TestCredentialsFormat(unittest.TestCase):
 
         test_format.add_data_to_database(test_db, credentials2)
 
-        matches = test_format.match_fields_with_database(test_db, ("email",), ("s6maleiw@uni-bonn.de",))
+        matches = test_format.match_fields_with_database(test_db, {"email": "s6maleiw@uni-bonn.de"})
 
         assert(matches == [CredentialHolder(email='s6maleiw@uni-bonn.de', password='')])
 
