@@ -52,14 +52,11 @@ class LineInterpreterPasswordMail(AbstractLineInterpreterCredential):
         item_splited = item.split(":")
 
         if len(item_splited) < 2:
-            print(item+" not aproved by PasswordMail")
             return False
 
         if self.email_regex.match(item_splited[-1]):
-            print(item+" aproved by PasswordMail")
             return True
 
-        print(item+" not aproved by PasswordMail")
         return False
 
     def interpret_item(self, item: str) -> CredentialHolder:
@@ -67,10 +64,8 @@ class LineInterpreterPasswordMail(AbstractLineInterpreterCredential):
         item_splited = item.split(":")
 
         if len(item_splited) < 2:
-            print(item+" error in PasswordMail < 2")
             raise InterpreterFormatError(item+" is not in the right format <password>:<email>")
 
-        print(item+" no error in PasswordMail")
         password = ":".join(item_splited[:-1])
         mail = item_splited[-1]
 
@@ -87,14 +82,11 @@ class LineInterpreterMailPassword(AbstractLineInterpreterCredential):
         item_splited = item.split(":")
 
         if len(item_splited) < 2:
-            print(item+" item not aproved by MailPassword")
             return False
 
         if self.email_regex.match(item_splited[0]):
-            print(item+" item aproved by MailPassword")
             return True
 
-        print(item+" item not aproved MailPassword")
         return False
 
     def interpret_item(self, item: str) -> CredentialHolder:
@@ -102,10 +94,8 @@ class LineInterpreterMailPassword(AbstractLineInterpreterCredential):
         item_splited = item.split(":")
 
         if len(item_splited) < 2:
-            print(item+" error in MailPassword < 2")
             raise InterpreterFormatError(item+" is not in the right format <email>:<password>")
 
-        print(item+" no error in MailPassword")
         mail = item_splited[0]
         password = ":".join(item_splited[1:])
 
