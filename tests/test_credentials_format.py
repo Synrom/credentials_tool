@@ -65,9 +65,18 @@ class TestCredentialsFormat(unittest.TestCase):
 
         test_format.add_data_to_database(test_db, credentials2)
 
-        matches = test_format.match_fields_with_database(test_db, {"email": "s6maleiw@uni-bonn.de"})
+        itemlist = [
+                "s6maleiw@uni-bonn.de:sehrsicherespasswort",
+                "max.leiwig@gmx.de:dieisteinpassswort",
+                "max.leiwig@gmail.com:falschespasswort"
+                ]
+        credentials_match = test_format.read_data_from_itemlist(itemlist)
+        matches = test_format.match_data_with_database(test_db, credentials_match)
 
-        assert(matches == [CredentialHolder(email='s6maleiw@uni-bonn.de', password='')])
+        assert(matches == [
+            CredentialHolder(email='s6maleiw@uni-bonn.de', password='sehrsicherespasswort'),
+            CredentialHolder(email='max.leiwig@gmx.de', password='dieisteinpassswort')
+            ])
 
         credentials_match = test_format.read_data_from_file("tests/data/test_match")
         matches = test_format.match_data_with_database(test_db, credentials_match)

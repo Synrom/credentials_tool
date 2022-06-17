@@ -31,6 +31,10 @@ class AbstractFormat(ABC):
         pass
 
     @abstractmethod
+    def read_data_from_itemlist(self, itemlist: list) -> list:
+        pass
+
+    @abstractmethod
     def add_data_to_database(self, database: AbstractDatabase, data: list) -> None:
         pass
 
@@ -39,7 +43,7 @@ class AbstractFormat(ABC):
         pass
 
     @abstractmethod
-    def match_fields_with_database(self, database: AbstractDatabase, search: dict) -> list:
+    def add_table_to_database(self, database: AbstractDatabase) -> None:
         pass
 
     # table_name should be unique for every format

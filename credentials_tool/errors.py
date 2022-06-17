@@ -2,6 +2,10 @@ class InterpreterNotFoundError(Exception):
     pass
 
 
+class InterpreterFormatError(Exception):
+    pass
+
+
 class DatabaseInsertionError(Exception):
     pass
 

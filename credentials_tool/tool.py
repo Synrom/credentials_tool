@@ -36,6 +36,7 @@ def read_data_from_file_to_database(credentials_format: AbstractFormat, database
 
     try:
 
+        credentials_format.add_table_to_database(database)
         credentials_format.add_data_to_database(database, data)
 
     except DatabaseInsertionError:
@@ -50,6 +51,8 @@ def read_data_from_file_to_database(credentials_format: AbstractFormat, database
 def match_data_from_file_with_database(credentials_format: AbstractFormat, database: AbstractDatabase, filename: str):
 
     data = credentials_format.read_data_from_file(filename)
+
+    print("match "+filename+" with database:")
 
     if len(data) == 0:
         return
@@ -66,12 +69,22 @@ def match_data_from_file_with_database(credentials_format: AbstractFormat, datab
             print(column+" "+ctype)
 
 
-def match_fields_with_database(credentials_format: AbstractFormat, database: AbstractDatabase, search: dict):
+def match_data_from_itemlist_with_database(credentials_format: AbstractFormat, database: AbstractDatabase, itemlist: list):
+
+    data = credentials_format.read_data_from_itemlist(itemlist)
+
+    print("match itemlist with database:")
+
+    if len(data) == 0:
+        return
 
     try:
-        credentials_format.match_fields_with_database(database, search)
+        credentials_format.match_data_with_database(database, data)
 
     except DatabaseMatchingError:
 
-        print("Error occured while matching")
-        print("Probably because columns of "+str(search)+" dont exist")
+        print("Error occured while matching data with database")
+        print("Probably because a table "+credentials_format.table_name+" already exists with a different datastructure then:")
+
+        for column, ctype in zip(credentials_format.table_columns, credentials_format.table_types):
+            print(column+" "+ctype)

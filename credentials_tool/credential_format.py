@@ -37,7 +37,7 @@ class AbstractLineInterpreterCredential(ABC):
         pass
 
     @abstractmethod
-    def interpret_line(self, line: str) -> CredentialHolder:
+    def interpret_item(self, line: str) -> CredentialHolder:
         pass
 
 
@@ -59,12 +59,12 @@ class LineInterpreterPasswordMail(AbstractLineInterpreterCredential):
 
         return False
 
-    def interpret_line(self, line: str) -> CredentialHolder:
+    def interpret_item(self, item: str) -> CredentialHolder:
 
-        line_splited = line.split(":")
+        item_splited = item.split(":")
 
-        password = line_splited[0].strip()
-        mail = line_splited[1].strip()
+        password = item_splited[0].strip()
+        mail = item_splited[1].strip()
 
         return CredentialHolder(email=mail, password=password)
 
@@ -87,12 +87,12 @@ class LineInterpreterMailPassword(AbstractLineInterpreterCredential):
 
         return False
 
-    def interpret_line(self, line: str) -> CredentialHolder:
+    def interpret_item(self, item: str) -> CredentialHolder:
 
-        line_splited = line.split(":")
+        item_splited = item.split(":")
 
-        mail = line_splited[0].strip()
-        password = line_splited[1].strip()
+        mail = item_splited[0].strip()
+        password = item_splited[1].strip()
 
         return CredentialHolder(email=mail, password=password)
 
@@ -118,16 +118,29 @@ class CredentialFormat(AbstractFormat):
     def read_data_from_file(self, filename: str) -> list[CredentialHolder]:
 
         f = open(filename, "r")
+        interpreter = self.establich_interpreter_for_itemlist(f.readlines())
 
-        file_interpreter = self.establich_interpreter_for_file(f)
+        f.seek(0)
 
         credentials = []
 
         for line in f.readlines():
 
-            credentials.append(file_interpreter.interpret_line(line))
+            credentials.append(interpreter.interpret_item(line))
 
         f.close()
+
+        return credentials
+
+    def read_data_from_itemlist(self, itemlist: list) -> list[CredentialHolder]:
+
+        interpreter = self.establich_interpreter_for_itemlist(itemlist)
+
+        credentials = []
+
+        for item in itemlist:
+
+            credentials.append(interpreter.interpret_item(item))
 
         return credentials
 
@@ -160,33 +173,22 @@ class CredentialFormat(AbstractFormat):
 
         return matches
 
-    def match_fields_with_database(self, database: AbstractDatabase, search: dict) -> list:
-
-        if "password" in search or "salt" in search:
-            return []
-
-        matches_as_tuples = database.match(self.table_name(), search, return_columns=self.table_columns_for_search)
-        matches_as_credentials = [CredentialHolder(*match) for match in matches_as_tuples]
-
-        return matches_as_credentials
-
     def add_table_to_database(self, database: AbstractDatabase) -> None:
         database.create_table_if_non_existent(self.table_name(), dict(zip(self.table_columns(), self.table_types())))
 
-    def establich_interpreter_for_file(self, file) -> AbstractLineInterpreterCredential:
+    def establich_interpreter_for_itemlist(self, items: list) -> AbstractLineInterpreterCredential:
 
-        for line in file.readlines():
+        for item in items:
 
             valid_interpreters = []
 
             for interpreter in self.line_interpreters:
 
-                if interpreter.check_line(line):
+                if interpreter.check_line(item):
                     valid_interpreters.append(interpreter)
 
             if len(valid_interpreters) == 1:
                 interpreter = valid_interpreters[0]
-                file.seek(0)
                 return interpreter
 
         raise InterpreterNotFoundError("No valid interpreter was found")
