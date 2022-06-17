@@ -1,6 +1,6 @@
 """Main module."""
 from credentials_tool.abstract_classes import AbstractDatabase, AbstractFormat
-from credentials_tool.errors import InterpreterNotFoundError, DatabaseInsertionError, DatabaseMatchingError
+from credentials_tool.errors import InterpreterNotFoundError, DatabaseInsertionError, DatabaseMatchingError, InterpreterFormatError
 
 
 def read_data_from_file(credentials_format: AbstractFormat, filename: str):
@@ -11,6 +11,10 @@ def read_data_from_file(credentials_format: AbstractFormat, filename: str):
 
     except InterpreterNotFoundError:
         print("Couldnt find a valid interpreter for the file")
+        return []
+
+    except InterpreterFormatError:
+        print("file "+filename+" is not in a valid format")
         return []
 
     except FileNotFoundError:
@@ -52,13 +56,15 @@ def match_data_from_file_with_database(credentials_format: AbstractFormat, datab
 
     data = credentials_format.read_data_from_file(filename)
 
-    print("match "+filename+" with database:")
+    print("match file "+filename+" with database:")
 
     if len(data) == 0:
         return
 
+    matches = []
+
     try:
-        credentials_format.match_data_with_database(database, data)
+        matches = credentials_format.match_data_with_database(database, data)
 
     except DatabaseMatchingError:
 
@@ -68,18 +74,33 @@ def match_data_from_file_with_database(credentials_format: AbstractFormat, datab
         for column, ctype in zip(credentials_format.table_columns, credentials_format.table_types):
             print(column+" "+ctype)
 
+    print("found "+str(len(matches))+" matches:")
+    for match in matches:
+        print(match)
+
 
 def match_data_from_itemlist_with_database(credentials_format: AbstractFormat, database: AbstractDatabase, itemlist: list):
 
-    data = credentials_format.read_data_from_itemlist(itemlist)
+    try:
+        data = credentials_format.read_data_from_itemlist(itemlist)
+
+    except InterpreterNotFoundError:
+        print("Couldnt find a valid interpreter for the file")
+        return []
+
+    except InterpreterFormatError:
+        print("The given item are not in a valid format")
+        return []
 
     print("match itemlist with database:")
 
     if len(data) == 0:
         return
 
+    matches = []
+
     try:
-        credentials_format.match_data_with_database(database, data)
+        matches = credentials_format.match_data_with_database(database, data)
 
     except DatabaseMatchingError:
 
@@ -88,3 +109,7 @@ def match_data_from_itemlist_with_database(credentials_format: AbstractFormat, d
 
         for column, ctype in zip(credentials_format.table_columns, credentials_format.table_types):
             print(column+" "+ctype)
+
+    print("found "+str(len(matches))+" matches:")
+    for match in matches:
+        print(match)

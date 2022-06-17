@@ -38,17 +38,20 @@ def main(command=sys.argv[1:]):
 
     credential_format = credentials_tool.credential_format.CredentialFormat()
 
-    for insert_filename in args.insert_filenames:
-        credentials_tool.tool.read_data_from_file_to_database(credential_format, database, insert_filename)
+    if args.insert_filenames:
+        for insert_filename in args.insert_filenames:
+            credentials_tool.tool.read_data_from_file_to_database(credential_format, database, insert_filename)
 
-    for match_filename in args.match_filenames:
-        credentials_tool.tool.match_data_from_file_with_database(credential_format, database, match_filename)
+    if args.match_filenames:
+        for match_filename in args.match_filenames:
+            credentials_tool.tool.match_data_from_file_with_database(credential_format, database, match_filename)
 
-    if len(args.match_items) != 0:
+    if args.match_items:
         credentials_tool.tool.match_data_from_itemlist_with_database(credential_format, database, args.match_items)
 
     database.commit()
     database.close()
+
     return 0
 
 

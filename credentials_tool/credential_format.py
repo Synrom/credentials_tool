@@ -4,9 +4,10 @@ import hashlib
 import base64
 import re
 import os
+from typing import Iterable
 
 from credentials_tool.abstract_classes import AbstractFormat, AbstractDatabase
-from credentials_tool.errors import InterpreterNotFoundError
+from credentials_tool.errors import InterpreterNotFoundError, InterpreterFormatError
 
 
 @dataclass
@@ -33,28 +34,27 @@ class CredentialHolder():
 class AbstractLineInterpreterCredential(ABC):
 
     @abstractmethod
-    def check_line(self, line: str) -> bool:
+    def check_item(self, item: str) -> bool:
         pass
 
     @abstractmethod
-    def interpret_item(self, line: str) -> CredentialHolder:
+    def interpret_item(self, item: str) -> CredentialHolder:
         pass
 
 
 class LineInterpreterPasswordMail(AbstractLineInterpreterCredential):
 
     def __init__(self, email_regex: str):
-        self.email_regex = email_regex
+        self.email_regex = re.compile(email_regex)
 
-    def check_line(self, line: str) -> bool:
+    def check_item(self, item: str) -> bool:
 
-        line_splited = line.split(":")
+        item_splited = item.split(":")
 
-        if len(line_splited) != 2:
+        if len(item_splited) < 2:
             return False
 
-        mail = line_splited[1].strip()
-        if re.match(self.email_regex, mail):
+        if self.email_regex.match(item_splited[-1]):
             return True
 
         return False
@@ -63,8 +63,11 @@ class LineInterpreterPasswordMail(AbstractLineInterpreterCredential):
 
         item_splited = item.split(":")
 
-        password = item_splited[0].strip()
-        mail = item_splited[1].strip()
+        if len(item_splited) < 2:
+            raise InterpreterFormatError(item+" is not in the right format <password>:<email>")
+
+        password = "".join(item_splited[:-1])
+        mail = item_splited[-1]
 
         return CredentialHolder(email=mail, password=password)
 
@@ -72,17 +75,16 @@ class LineInterpreterPasswordMail(AbstractLineInterpreterCredential):
 class LineInterpreterMailPassword(AbstractLineInterpreterCredential):
 
     def __init__(self, email_regex: str):
-        self.email_regex = email_regex
+        self.email_regex = re.compile(email_regex)
 
-    def check_line(self, line: str) -> bool:
+    def check_item(self, item: str) -> bool:
 
-        line_splited = line.split(":")
+        item_splited = item.split(":")
 
-        if len(line_splited) != 2:
+        if len(item_splited) < 2:
             return False
 
-        mail = line_splited[0].strip()
-        if re.match(self.email_regex, mail):
+        if self.email_regex.match(item_splited[0]):
             return True
 
         return False
@@ -91,8 +93,11 @@ class LineInterpreterMailPassword(AbstractLineInterpreterCredential):
 
         item_splited = item.split(":")
 
-        mail = item_splited[0].strip()
-        password = item_splited[1].strip()
+        if len(item_splited) < 2:
+            raise InterpreterFormatError(item+" is not in the right format <email>:<password>")
+
+        mail = item_splited[0]
+        password = "".join(item_splited[1:])
 
         return CredentialHolder(email=mail, password=password)
 
@@ -118,15 +123,26 @@ class CredentialFormat(AbstractFormat):
     def read_data_from_file(self, filename: str) -> list[CredentialHolder]:
 
         f = open(filename, "r")
-        interpreter = self.establich_interpreter_for_itemlist(f.readlines())
+
+        def readlines() -> Iterable:
+
+            for line in f.readlines():
+
+                if line[-1] == "\n":
+                    yield line[:-1]
+
+                else:
+                    yield line
+
+        interpreter = self.establich_interpreter_for_itemlist(readlines())
 
         f.seek(0)
 
         credentials = []
 
-        for line in f.readlines():
+        for item in readlines():
 
-            credentials.append(interpreter.interpret_item(line))
+            credentials.append(interpreter.interpret_item(item))
 
         f.close()
 
@@ -176,7 +192,7 @@ class CredentialFormat(AbstractFormat):
     def add_table_to_database(self, database: AbstractDatabase) -> None:
         database.create_table_if_non_existent(self.table_name(), dict(zip(self.table_columns(), self.table_types())))
 
-    def establich_interpreter_for_itemlist(self, items: list) -> AbstractLineInterpreterCredential:
+    def establich_interpreter_for_itemlist(self, items: Iterable) -> AbstractLineInterpreterCredential:
 
         for item in items:
 
@@ -184,7 +200,7 @@ class CredentialFormat(AbstractFormat):
 
             for interpreter in self.line_interpreters:
 
-                if interpreter.check_line(item):
+                if interpreter.check_item(item):
                     valid_interpreters.append(interpreter)
 
             if len(valid_interpreters) == 1:
