@@ -9,21 +9,22 @@ import credentials_tool.errors
 
 def main(command=sys.argv[1:]):
     """Console script for credentials_tool."""
+
     description = "A command-line interface tool for handling credentials. Currently implements storing and comparing with a database."
     parser = argparse.ArgumentParser(description=description)
 
     help_file = "read data from files"
-    parser.add_argument("-in", metavar="filename", type=str, nargs="*", dest="insert_filenames", help=help_file)
+    parser.add_argument("-if", "--input-files", metavar="filename", type=str, nargs="*", dest="insert_filenames", help=help_file)
 
     help_db = "use this file as database (default: credentials.db)"
-    parser.add_argument("-db", metavar="database", type=str, default="credentials.db", dest="db", help=help_db)
+    parser.add_argument("-db", "--database", metavar="database", type=str, default="credentials.db", dest="db", help=help_db)
 
     help_match = "match database with these files (after inserting the files specified by -in)"
-    parser.add_argument("-matchfiles", metavar="filename", type=str, nargs="*", dest="match_filenames", help=help_match)
+    parser.add_argument("-mf", "--match-files", metavar="filename", type=str, nargs="*", dest="match_filenames", help=help_match)
 
     help_match = "match database with these items (after inserting the files specified by -in)."
     help_match += "The items are given either in the format <email>:<password> or <password>:<email>, but not both"
-    parser.add_argument("-matchitems", metavar="item", type=str, nargs="*", dest="match_items", help=help_match)
+    parser.add_argument("-mi", "--match-items", metavar="item", type=str, nargs="*", dest="match_items", help=help_match)
 
     args = parser.parse_args(command)
 

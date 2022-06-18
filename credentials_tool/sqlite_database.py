@@ -37,6 +37,7 @@ class SqliteDatabase(AbstractDatabase):
         sql_cmd += ", ".join(return_columns)
         sql_cmd += " FROM "+tablename+" WHERE "
 
+        # extract search_values and search_columns from dict
         search_values = ()
         search_columns = ()
         for column, value in search.items():
@@ -54,9 +55,16 @@ class SqliteDatabase(AbstractDatabase):
         return self.cursor.fetchall()
 
     def exist_table(self, tablename: str):
+        """
+        This function checks wether a table exists in the database.
+
+        tablename: str
+            name of the table to check
+        """
 
         self.cursor.fetchall()
 
+        # sqlite_master table stores the tables in sqlite
         self.cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (tablename,))
 
         if self.cursor.fetchone():
@@ -64,6 +72,14 @@ class SqliteDatabase(AbstractDatabase):
         return False
 
     def create_table(self, tablename: str, tablestructure: dict) -> None:
+        """
+        This function creates a table in the database.
+
+        tablename: str
+            name of the table to create
+        tablestructure: dict
+            structure of the table in a {"<column_name>": "<column_type>", ...} dict
+        """
 
         sql_cmd = "CREATE TABLE "+tablename+" ("
         sql_cmd += ",".join(str(column)+" "+str(typename) for column, typename in tablestructure.items())

@@ -1,5 +1,5 @@
 Welcome to credentials_tool's documentation!
-======================================
+============================================
 
 .. toctree::
    :maxdepth: 2

@@ -2,29 +2,39 @@
 credentials_tool
 ================
 
-
-.. image:: https://img.shields.io/pypi/v/credentials_tool.svg
-        :target: https://pypi.python.org/pypi/credentials_tool
-
-.. image:: https://img.shields.io/travis/Synrom/credentials_tool.svg
-        :target: https://travis-ci.com/Synrom/credentials_tool
-
-.. image:: https://readthedocs.org/projects/credentials-tool/badge/?version=latest
-        :target: https://credentials-tool.readthedocs.io/en/latest/?version=latest
-        :alt: Documentation Status
-
-
-
-
 A command-line interface tool for handling credentials. Currently implements storing and comparing with a database.
 
 
 * Free software: GNU General Public License v3
 
+Install
+--------
+1. Go to the root folder of the project and execute::
+
+   $ python setup.py install
+
+2. Now you can execute the tool using::
+
+   $ credentials_tool -h
+
 Features
 --------
+1. read data from a file and match it with a database::
 
-TODO
+   $ credentials_tool -mf file1 file2 -db database.db
+
+2. read data from a command line arguments and match it with a database::
+
+   $ credentials_tool -mi "example1.mail@mail.com:password1" "example2.mail@mail.com:password2" -db database.db
+
+3. read data from a file and insert it into a database::
+
+   $ credentials_tool -if file1 file2 -db database.db
+
+4. the CLI is built in a way to support all functionalities at the same time::
+
+   $ credentials_tool -if insertfile1 insertfile2 -mf matchfile1 matchfile2 -mi "example1.mail@mail.com:password1"  -db database.db
+
 
 Credits
 -------

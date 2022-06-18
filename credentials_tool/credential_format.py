@@ -12,18 +12,37 @@ from credentials_tool.errors import InterpreterNotFoundError, InterpreterFormatE
 
 @dataclass
 class CredentialHolder():
+    """
+    This class represents the data of one credential instance of the CredentialFormat.
+    It also implements methods for hashing.
+    """
+
     email: str
     password: str = ""
 
     def generate_salt(self):
+        """ This function generates a 32-Byte long salt """
         return os.urandom(32)
 
-    def get_hashed_password(self, salt):
+    def get_hashed_password(self, salt: bytes):
+        """
+        This calculates and returns the hash of the password of the credential instance represented by this object.
+
+        salt: bytes
+            The salt for calculating the hash.
+        """
+
         hashed_pwd = hashlib.pbkdf2_hmac("sha256", self.password.encode("utf-8"), salt, 100000, dklen=128)
         b64_hashed_pwd = base64.b64encode(hashed_pwd).decode("utf-8")
+
         return b64_hashed_pwd
 
     def as_tuple_with_hashed_password(self):
+        """
+        This method generates and returns a tuple containing (email, hashed password, used salt for hashing)
+        of the credential instance represented by this object.
+        """
+
         raw_salt = self.generate_salt()
         hashed_pwd = self.get_hashed_password(raw_salt)
         salt = base64.b64encode(raw_salt).decode("utf-8")
@@ -31,29 +50,49 @@ class CredentialHolder():
         return (self.email, hashed_pwd, salt)
 
 
-class AbstractLineInterpreterCredential(ABC):
+class AbstractItemInterpreterCredential(ABC):
+    """
+    This class represents an abstract item interpreter for CredentialFormat.
+    An item is an string containing exactly one credential instance.
+    """
 
     @abstractmethod
     def check_item(self, item: str) -> bool:
+        """
+        This method checks wether the format of this item interpreter fits the given item and returns a bool correspondingly.
+
+        item: str
+            The item, that will be checked
+        """
         pass
 
     @abstractmethod
     def interpret_item(self, item: str) -> CredentialHolder:
+        """
+        This method interprets and returns one item.
+
+        item: str
+            The item, that will be interpreted
+        """
         pass
 
 
-class LineInterpreterPasswordMail(AbstractLineInterpreterCredential):
+class ItemInterpreterPasswordMail(AbstractItemInterpreterCredential):
+    """
+    This ItemInterpreter has the item format "<password>:<email>"
+    """
 
     def __init__(self, email_regex: str):
-        self.email_regex = re.compile(email_regex)
+        self.email_regex = re.compile(email_regex)  # will be specified by CredentialFormat
 
     def check_item(self, item: str) -> bool:
 
         item_splited = item.split(":")
 
-        if len(item_splited) < 2:
+        if len(item_splited) < 2:  # there must be at least one ":"
             return False
 
+        # since password can contain ":"s, only check the last element
         if self.email_regex.match(item_splited[-1]):
             return True
 
@@ -66,22 +105,26 @@ class LineInterpreterPasswordMail(AbstractLineInterpreterCredential):
         if len(item_splited) < 2:
             raise InterpreterFormatError(item+" is not in the right format <password>:<email>")
 
+        # this is handled in this way since password can contain ":"s
         password = ":".join(item_splited[:-1])
         mail = item_splited[-1]
 
         return CredentialHolder(email=mail, password=password)
 
 
-class LineInterpreterMailPassword(AbstractLineInterpreterCredential):
+class ItemInterpreterMailPassword(AbstractItemInterpreterCredential):
+    """
+    This ItemInterpreter has the item format "<mail>:<password>"
+    """
 
-    def __init__(self, email_regex: str):
+    def __init__(self, email_regex: str):  # will be specified by CredentialFormat
         self.email_regex = re.compile(email_regex)
 
     def check_item(self, item: str) -> bool:
 
         item_splited = item.split(":")
 
-        if len(item_splited) < 2:
+        if len(item_splited) < 2:  # there must be at least one ":"
             return False
 
         if self.email_regex.match(item_splited[0]):
@@ -96,6 +139,7 @@ class LineInterpreterMailPassword(AbstractLineInterpreterCredential):
         if len(item_splited) < 2:
             raise InterpreterFormatError(item+" is not in the right format <email>:<password>")
 
+        # this is handled in this way since password can contain ":"s
         mail = item_splited[0]
         password = ":".join(item_splited[1:])
 
@@ -103,6 +147,14 @@ class LineInterpreterMailPassword(AbstractLineInterpreterCredential):
 
 
 class CredentialFormat(AbstractFormat):
+    """
+    The credential format represented by this class is either stored in <email>:<password> or <password>:<email> items.
+    This Format will store credentials in a database in the (email varchar(320), password varchar(172), salt varchar(44)) format:
+    - password will be a base64 encoded 128-Byte long pkcs5 kdf2 hmac with sha256, 100000 iterations and a salt
+    - salt will be the salt used to generate password and is a base64 encoded 32-Byte salt generated by os.urandom(32)
+    The tablename is "credentials_email_and_password".
+    This way of storing the credentials slows the performance down significantly, but it is very secure.
+    """
 
     def table_name(self):
         return "credentials_email_and_password"
@@ -115,7 +167,7 @@ class CredentialFormat(AbstractFormat):
 
     def __init__(self, email_regex: str = r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)"):
 
-        self.line_interpreters = [LineInterpreterMailPassword(email_regex), LineInterpreterPasswordMail(email_regex)]
+        self.item_interpreters = [ItemInterpreterMailPassword(email_regex), ItemInterpreterPasswordMail(email_regex)]
         self.table_columns_for_search = ("email",)
         self.table_salt_position = 2
         self.table_password_position = 1
@@ -124,6 +176,7 @@ class CredentialFormat(AbstractFormat):
 
         f = open(filename, "r")
 
+        # this function is needed to still be able to use the item functionalities without having to go over the whole file content
         def readlines() -> Iterable:
 
             for line in f.readlines():
@@ -134,7 +187,7 @@ class CredentialFormat(AbstractFormat):
                 else:
                     yield line
 
-        interpreter = self.establich_interpreter_for_itemlist(readlines())
+        interpreter = self.establish_interpreter_for_itemlist(readlines())
 
         f.seek(0)
 
@@ -148,9 +201,9 @@ class CredentialFormat(AbstractFormat):
 
         return credentials
 
-    def read_data_from_itemlist(self, itemlist: list) -> list[CredentialHolder]:
+    def read_data_from_itemlist(self, itemlist: list[str]) -> list[CredentialHolder]:
 
-        interpreter = self.establich_interpreter_for_itemlist(itemlist)
+        interpreter = self.establish_interpreter_for_itemlist(itemlist)
 
         credentials = []
 
@@ -173,14 +226,18 @@ class CredentialFormat(AbstractFormat):
         for credential in credentials:
 
             search = {}
-            credential_dict = asdict(credential)
+            credential_dict = asdict(credential)  # dataclasses can be converted to dict
 
+            # constructing a {column_name: value, ...} dict for the database match
+            # self.table_columns_for_search ignores password and salt
             for column in self.table_columns_for_search:
                 search.update({column: credential_dict[column]})
 
             matches_of_credential = database.match(self.table_name(), search, return_columns=self.table_columns())
 
             for match_of_credential in matches_of_credential:
+
+                # if we have a match, we calculate the hash of the password and match that with the database data
 
                 raw_salt = base64.b64decode(match_of_credential[self.table_salt_position])
 
@@ -192,16 +249,29 @@ class CredentialFormat(AbstractFormat):
     def add_table_to_database(self, database: AbstractDatabase) -> None:
         database.create_table_if_non_existent(self.table_name(), dict(zip(self.table_columns(), self.table_types())))
 
-    def establich_interpreter_for_itemlist(self, items: Iterable) -> AbstractLineInterpreterCredential:
+    def establish_interpreter_for_itemlist(self, itemlist: Iterable) -> AbstractItemInterpreterCredential:
+        """
+        This method establishes and returns an item interpreter for a list of items.
 
-        for item in items:
+        itemlist: Iterable
+            list of items for which an item interpreter will be established
+        """
 
-            valid_interpreters = []
+        # we go over all items until we find one, where exactly one interpreter works.
+        # we do that because one could use its email adress also as a password.
+        # then we need to iterate until we find a credential, where email and password distinguish in format
 
-            for interpreter in self.line_interpreters:
+        valid_interpreters = self.item_interpreters.copy()
 
-                if interpreter.check_item(item):
-                    valid_interpreters.append(interpreter)
+        for item in itemlist:
+
+            for interpreter in valid_interpreters:
+
+                if not interpreter.check_item(item):
+                    valid_interpreters.remove(interpreter)
+
+            if len(valid_interpreters) == 0:
+                break
 
             if len(valid_interpreters) == 1:
                 interpreter = valid_interpreters[0]

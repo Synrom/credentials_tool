@@ -3,7 +3,15 @@ from credentials_tool.abstract_classes import AbstractDatabase, AbstractFormat
 from credentials_tool.errors import InterpreterNotFoundError, DatabaseInsertionError, DatabaseMatchingError, InterpreterFormatError
 
 
-def read_data_from_file(credentials_format: AbstractFormat, filename: str):
+def read_data_from_file(credentials_format: AbstractFormat, filename: str) -> list:
+    """
+    This function reads data from a file and returns it
+
+    credentials_format: AbstractFormat
+        the format in which the file will be interpreted
+    filename: str
+        the file name
+    """
 
     try:
 
@@ -32,6 +40,16 @@ def read_data_from_file(credentials_format: AbstractFormat, filename: str):
 
 
 def read_data_from_file_to_database(credentials_format: AbstractFormat, database: AbstractDatabase, filename: str):
+    """
+    This function reads data from a file and inserts it into a database
+
+    credentials_format: AbstractFormat
+        the format in which the file will be interpreted and the data will be inserted
+    database: AbstractDatabase
+        the database in which the data will be inserted
+    filename: str
+        the file name
+    """
 
     data = read_data_from_file(credentials_format, filename)
 
@@ -40,7 +58,7 @@ def read_data_from_file_to_database(credentials_format: AbstractFormat, database
 
     try:
 
-        credentials_format.add_table_to_database(database)
+        credentials_format.add_table_to_database(database)  # adds the format table, if it doesnt already exists
         credentials_format.add_data_to_database(database, data)
 
     except DatabaseInsertionError:
@@ -53,6 +71,16 @@ def read_data_from_file_to_database(credentials_format: AbstractFormat, database
 
 
 def match_data_from_file_with_database(credentials_format: AbstractFormat, database: AbstractDatabase, filename: str):
+    """
+    This function reades data from a file and matches it with a database
+
+    credentials_format: AbstractFormat
+        the format in which the file will be interpreted and the data will be matched
+    database: AbstractDatabase
+        the database to which the data will be matched
+    filename: str
+        the file name
+    """
 
     data = credentials_format.read_data_from_file(filename)
 
@@ -80,17 +108,27 @@ def match_data_from_file_with_database(credentials_format: AbstractFormat, datab
 
 
 def match_data_from_itemlist_with_database(credentials_format: AbstractFormat, database: AbstractDatabase, itemlist: list):
+    """
+    This function reades data from a itemlist and matches it with a database
+
+    credentials_format: AbstractFormat
+        the format in which the itemlist will be interpreted and the data will be matched
+    database: AbstractDatabase
+        the database to which the data will be matched
+    itemlist: str
+        the itemlist, which will be matched with the database
+    """
 
     try:
         data = credentials_format.read_data_from_itemlist(itemlist)
 
     except InterpreterNotFoundError:
         print("Couldnt find a valid interpreter for the file")
-        return []
+        return
 
     except InterpreterFormatError:
         print("The given item are not in a valid format")
-        return []
+        return
 
     print("match itemlist with database:")
 
