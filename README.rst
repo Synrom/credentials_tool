@@ -9,6 +9,10 @@ A command-line interface tool for handling credentials. Currently implements sto
 
 Install
 --------
+1. Clone the repository::
+
+   $ git clone https://github.com/Synrom/credentials_tool.git
+
 1. Go to the root folder of the project and execute::
 
    $ python setup.py install
